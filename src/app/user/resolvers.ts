@@ -1,7 +1,10 @@
 import axios from 'axios';
-import { PrismaClient } from '@prisma/client';
+import {prismaClient} from '../../clients/db/index'
+import {User}  from '@prisma/client';
 import JWTservice from '../../services/jwt';
-const prismaClient = new PrismaClient();
+import {  GraphqlContext } from '../../intefaces';
+import { graphql } from 'graphql';
+
 
 const GOOGLE_OAUTH_URL = 'https://oauth2.googleapis.com/tokeninfo';
 
@@ -42,9 +45,6 @@ const queries = {
                 responseType: 'json'
             });
 
-            console.log(data);
-
-            // Check if the user exists
             const checkUserExist = await prismaClient.user.findUnique({ 
                 where: { email: data.email } 
             });
@@ -65,13 +65,25 @@ const queries = {
 
             if(!userInDB)  throw new Error('User not found');
 
-            const Usertoken = JWTservice.generateToken(userInDB);
+            const Usertoken = JWTservice.generateTokenForUser(userInDB);
 
             return token
         } catch (error) {
             console.log('error in verifying google token: ', error);
             return null;
         }
+    },
+
+    getCurrentUserDetails: async (_parent: any, _args: any, context: GraphqlContext) => {
+        const id = context.user?.id;
+
+        console.log(context.user);
+
+        if (!id) throw new Error('User not found');
+
+        const user = await prismaClient.user.findUnique({ where: { id } });
+
+        return user;
     }
 }
 

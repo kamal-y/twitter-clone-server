@@ -1,33 +1,50 @@
-import express, { Application } from "express";
-import { ApolloServer } from "apollo-server-express";
+import express from "express";
 import bodyParser from "body-parser";
-import { user } from "./user";
 import cors from "cors";
+import { ApolloServer } from "apollo-server-express";
+import JWTService from "../services/jwt";
+import { GraphqlContext } from "../intefaces";
+import { User } from "../app/user";
 
-export const initServer = async (): Promise<Application> => {
-    const app: Application = express();
+interface MyContext {
+  req: express.Request;
+  res: express.Response;
+}
 
-    app.use(bodyParser.json());
-    app.use(cors());
+export async function initServer() {
+  const app = express();
 
-    const graphqlServer = new ApolloServer({
-        typeDefs: `
-            ${user.types}
+  app.use(bodyParser.json());
+  app.use(cors());
+
+  app.get("/", (req, res) => {
+    res.status(200).json({ message: "Everything is good" });
+  });
+
+  const graphqlServer = new ApolloServer<GraphqlContext>({
+    typeDefs: `
+            ${User.types}
 
             type Query {
-                ${user.queries}
+                ${User.queries}
             }
         `,
-        resolvers: {
-            Query: {
-                ...user.resolvers.queries
-            }
-        }
-    });
+    resolvers: {
+      Query: {
+        ...User.resolvers.queries
+      }
+    },
+    context: ({ req, res }: MyContext) => {
+      return {
+        user: req.headers.authorization
+          ? JWTService.decodeToken(req.headers.authorization.split("Bearer ")[1])
+          : undefined,
+      };
+    },
+  });
 
-    await graphqlServer.start();
+  await graphqlServer.start();
+  graphqlServer.applyMiddleware({ app });
 
-    graphqlServer.applyMiddleware({ app });
-
-    return app;
-};
+  return app;
+}
