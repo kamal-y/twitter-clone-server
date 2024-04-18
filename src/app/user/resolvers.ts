@@ -67,17 +67,15 @@ const queries = {
 
             const Usertoken = JWTservice.generateTokenForUser(userInDB);
 
-            return token
-        } catch (error) {
-            console.log('error in verifying google token: ', error);
+            return Usertoken
+        } catch (err: any) {
+            console.log('Error in verifying Google token:', err.message);
             return null;
         }
     },
 
     getCurrentUserDetails: async (_parent: any, _args: any, context: GraphqlContext) => {
         const id = context.user?.id;
-
-        console.log(context.user);
 
         if (!id) throw new Error('User not found');
 
