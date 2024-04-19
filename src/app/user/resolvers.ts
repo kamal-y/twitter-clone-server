@@ -85,4 +85,10 @@ const queries = {
     }
 }
 
-export const resolvers = { queries }
+const extraResolvers = {
+    User : {
+        tweets : ( parent : User) => prismaClient.tweet.findMany({ where : { authorId : parent.id } })
+    }
+}
+
+export const resolvers = { queries , extraResolvers}

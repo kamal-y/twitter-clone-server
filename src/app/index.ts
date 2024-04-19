@@ -5,6 +5,7 @@ import { ApolloServer } from "apollo-server-express";
 import JWTService from "../services/jwt";
 import { GraphqlContext } from "../intefaces";
 import { User } from "../app/user";
+import { Tweet } from "./tweet";
 
 interface MyContext {
   req: express.Request;
@@ -24,15 +25,27 @@ export async function initServer() {
   const graphqlServer = new ApolloServer<GraphqlContext>({
     typeDefs: `
             ${User.types}
+            ${Tweet.types}
 
             type Query {
                 ${User.queries}
+                ${Tweet.queries}
+            }
+
+            type Mutation {
+                ${Tweet.mutations}
             }
         `,
     resolvers: {
       Query: {
-        ...User.resolvers.queries
-      }
+        ...User.resolvers.queries,
+        ...Tweet.resolvers.queries,
+      },
+      Mutation : {
+        ...Tweet.resolvers.mutations
+      },
+      ...Tweet.resolvers.extraResolvers,
+      ...User.resolvers.extraResolvers,
     },
     context: ({ req, res }: MyContext) => {
       return {
