@@ -24,7 +24,6 @@ class JWTService {
     try {
       return JWT.verify(token, JWT_SECRET) as JWTUser;
     } catch (error) {
-      console.log("i am inside decodeToken function");
       console.log((error as Error).message);
       return null;
     }

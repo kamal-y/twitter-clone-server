@@ -1,10 +1,8 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-
 generator client {
   provider = "prisma-client-js"
-  
 }
 
 datasource db {
@@ -13,27 +11,38 @@ datasource db {
 }
 
 model User {
-  id String @id @default(cuid())
-  firstName String
-  lastName String?
-  email String @unique
+  id              String  @id @default(cuid())
+  firstName       String
+  lastName        String?
+  email           String  @unique
   profileImageUrl String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  tweets Tweet[]
+  follower  Follows[] @relation("follower")
+  following Follows[] @relation("following")
 
+  tweets Tweet[]
+}
+
+model Follows {
+  follower   User   @relation("follower", fields: [followerId], references: [id])
+  followerId String
+
+  following   User   @relation("following", fields: [followingId], references: [id])
+  followingId String
+
+  @@id([followerId, followingId])
 }
 
 model Tweet {
-  id String @id @default(cuid())
-  content String
+  id       String  @id @default(cuid())
+  content  String
   imageURL String?
-  author User @relation(fields: [authorId] , references: [id])
+  author   User    @relation(fields: [authorId], references: [id])
   authorId String
 
-  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

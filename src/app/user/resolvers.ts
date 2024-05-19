@@ -1,77 +1,18 @@
 import axios from 'axios';
-import {prismaClient} from '../../clients/db/index'
-import {User}  from '@prisma/client';
-import JWTservice from '../../services/jwt';
-import {  GraphqlContext } from '../../intefaces';
+import { prismaClient } from '../../clients/db/index'
+import { User } from '@prisma/client';
+import { GraphqlContext } from '../../intefaces';
 import { graphql } from 'graphql';
+import UserService from '../../services/User';
+import TweetService from '../../services/Tweet';
 
 
-const GOOGLE_OAUTH_URL = 'https://oauth2.googleapis.com/tokeninfo';
-
-interface GoogleOauthResponse {
-    iss?: string; // Issuer
-    azp?: string; // Authorized Party
-    aud?: string; // Audience
-    sub?: string; // Subject
-    email: string; // Email
-    email_verified?: string; // Email Verified
-    nbf?: string; // Not Before
-    name?: string; // Name
-    picture?: string; // Picture
-    given_name: string; // Given Name
-    family_name: string; // Given Name
-    locale?: string; // Locale
-    iat?: string; // Issued At
-    exp?: string; // Expiration Time
-    jti?: string; // JWT ID
-    alg?: string; // Algorithm
-    kid?: string; // Key ID
-    typ?: string; // Type
-}
 
 const queries = {
 
-    verifyGoogleToken: async (parent : any, {token}:{ token: string }) => {
-
-        const googleToken = token;
-
-        try {
-            // Verify the token
-            const googleOauthUrl = new URL(GOOGLE_OAUTH_URL);
-            googleOauthUrl.searchParams.set('id_token', googleToken);
-
-            const { data } = await  axios.get<GoogleOauthResponse>(googleOauthUrl.toString(),
-            {
-                responseType: 'json'
-            });
-
-            const checkUserExist = await prismaClient.user.findUnique({ 
-                where: { email: data.email } 
-            });
-
-            if(!checkUserExist) {
-                // Create user
-                const newUser = await prismaClient.user.create({
-                    data: {
-                        email: data.email,
-                        firstName : data.given_name,
-                        lastName : data.family_name,
-                        profileImageUrl :data.picture
-                    }
-                });
-            }
-
-            const userInDB = await prismaClient.user.findUnique({ where: { email: data.email } });
-
-            if(!userInDB)  throw new Error('User not found');
-
-            const Usertoken = JWTservice.generateTokenForUser(userInDB);
-
-            return Usertoken
-        } catch (err: any) {
-            console.log('Error in verifying Google token:', err.message);
-            return null;
-        }
+    verifyGoogleToken: async (parent: any, { token }: { token: string }) => {
+        const resultToken = await UserService.verifyGoogleAuthToken(token)
+        return resultToken
     },
 
     getCurrentUserDetails: async (_parent: any, _args: any, context: GraphqlContext) => {
@@ -79,16 +20,94 @@ const queries = {
 
         if (!id) throw new Error('User not found');
 
-        const user = await prismaClient.user.findUnique({ where: { id } });
+        const user = await UserService.getUserById(id);
+
+        return user;
+    },
+
+    getUserById: async (_parent: any, { id }: { id: string }, context: GraphqlContext) => {
+        const user = await UserService.getUserById(id);
 
         return user;
     }
 }
 
-const extraResolvers = {
-    User : {
-        tweets : ( parent : User) => prismaClient.tweet.findMany({ where : { authorId : parent.id } })
+const mutations = {
+    followUser: async (_parent: any, { to }: { to: string }, context: GraphqlContext) => {
+        if (!context.user || !context.user.id) throw new Error("unauthorized")
+
+        await UserService.followUser(context.user.id, to)
+        return true
+    },
+
+    unFollowUser: async (_parent: any, { to }: { to: string }, context: GraphqlContext) => {
+        if (!context.user || !context.user.id) throw new Error("unauthorized")
+
+        await UserService.unFollowUser(context.user.id, to)
+        return true
     }
 }
 
-export const resolvers = { queries , extraResolvers}
+const extraResolvers = {
+    User: {
+        tweets: (parent: User) => UserService.getAllUserTweets(parent),
+
+        follower: async (parent: User) => {
+            const result = await prismaClient.follows.findMany({
+                where: { following: { id: parent.id } },
+                include: {
+                    follower: true
+                }
+            })
+
+            return result.map((el) => el.follower)
+
+        },
+
+        following: async (parent: User) => {
+            const result = await prismaClient.follows.findMany({
+                where: { follower: { id: parent.id } },
+                include: {
+                    following: true
+                }
+            },
+            )
+            return result.map((el) => el.following)
+        },
+
+        recommendedUsers: async (parent: User, _: any, ctx: GraphqlContext) => {
+            if (!ctx.user) return [];
+
+            const myFollowings = await prismaClient.follows.findMany({
+                where: {
+                    follower: { id: ctx.user.id },
+                },
+                include: {
+                    following: {
+                        include: { follower: { include: { following: true } } },
+                    },
+                },
+            });
+
+            const users: User[] = [];
+
+            for (const followings of myFollowings) {
+                for (const followingOfFollowedUser of followings.following.follower) {
+                    if (
+                        followingOfFollowedUser.following.id !== ctx.user.id &&
+                        myFollowings.findIndex(
+                            (e) => e?.followingId === followingOfFollowedUser.following.id
+                        ) < 0
+                    ) {
+                        users.push(followingOfFollowedUser.following);
+                    }
+                }
+            }
+
+            return users;
+        },
+
+    }
+}
+
+export const resolvers = { queries, extraResolvers, mutations }
