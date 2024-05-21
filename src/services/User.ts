@@ -75,7 +75,7 @@ class UserService {
     }
 
     public static getAllUserTweets(parent: User) {
-        return prismaClient.tweet.findMany({ where: { authorId: parent.id } })
+        return prismaClient.tweet.findMany({ where: { authorId: parent.id }, orderBy:{createdAt:"desc"} })
     }
 
     public static followUser(from: string, to: string) {
@@ -110,6 +110,10 @@ class UserService {
                 where: { followerId_followingId: { followerId: from, followingId: to } }
             }
         )
+    }
+
+    public static async deleteTweet(id:string){
+        return await prismaClient.tweet.delete({where:{id}})
     }
 }
 

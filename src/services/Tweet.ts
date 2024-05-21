@@ -32,6 +32,7 @@ class TweetService{
     }
 
     public static async getAllTweets(){
+        
         const allTweetsthroughRedis = await redisClient.get("ALL_TWEETS")
 
         if(allTweetsthroughRedis) return JSON.parse(allTweetsthroughRedis)

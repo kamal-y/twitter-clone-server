@@ -48,6 +48,14 @@ const mutations = {
         await UserService.unFollowUser(context.user.id, to)
         await redisClient.del(`recommended_users:${context.user.id}`)
         return true
+    },
+
+    deleteTweetById: async(_p:any, {id}:{id:string},context: GraphqlContext)=>{
+        // if (!context.user || !context.user.id) throw new Error("unauthorized")
+
+        await UserService.deleteTweet(id)
+        await redisClient.del("ALL_TWEETS")
+        return true
     }
 }
 
