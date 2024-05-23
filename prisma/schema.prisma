@@ -23,6 +23,7 @@ model User {
   follower  Follows[] @relation("follower")
   following Follows[] @relation("following")
 
+  tweetsLiked String[]
   tweets Tweet[]
 }
 

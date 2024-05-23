@@ -50,13 +50,31 @@ const mutations = {
         return true
     },
 
-    deleteTweetById: async(_p:any, {id}:{id:string},context: GraphqlContext)=>{
-        // if (!context.user || !context.user.id) throw new Error("unauthorized")
+    deleteTweetById: async (_p: any, { id }: { id: string }, context: GraphqlContext) => {
+        if (!context.user || !context.user.id) throw new Error("unauthorized")
 
         await UserService.deleteTweet(id)
         await redisClient.del("ALL_TWEETS")
         return true
-    }
+    },
+
+    likeTweetById: async (_p: any, { id }: { id: string }, context: GraphqlContext) => {
+        if (!context.user || !context.user.id) throw new Error("unauthorized")
+
+        const userId = context.user.id
+
+        await UserService.likeTweet(id, userId)
+        return true
+    },
+
+    unlikeTweetById: async (_p: any, { id }: { id: string }, context: GraphqlContext) => {
+        if (!context.user || !context.user.id) throw new Error("unauthorized")
+
+        const userId = context.user.id
+
+        await UserService.unlikeTweet(id, userId)
+        return true
+    },
 }
 
 const extraResolvers = {
@@ -91,7 +109,7 @@ const extraResolvers = {
 
             const cachedValue = await redisClient.get(`recommended_users:${ctx.user.id}`)
 
-            if(cachedValue) {
+            if (cachedValue) {
                 return JSON.parse(cachedValue)
             }
 

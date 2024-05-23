@@ -71,7 +71,7 @@ class UserService {
     }
 
     public static async getUserById(id: string) {
-        return await prismaClient.user.findUnique({ where: { id } })
+        return await prismaClient.user.findUnique({ where: { id : id} })
     }
 
     public static getAllUserTweets(parent: User) {
@@ -115,6 +115,41 @@ class UserService {
     public static async deleteTweet(id:string){
         return await prismaClient.tweet.delete({where:{id}})
     }
+
+    public static async likeTweet(id:string, userId:string){
+        return await prismaClient.user.update({
+            where: { id: userId },
+            data: {
+                tweetsLiked:{
+                    push:id
+                }
+            },
+          })
+    }
+
+    public static async unlikeTweet(id: string, userId: string) {
+        
+        const user = await prismaClient.user.findUnique({
+            where: { id: userId },
+            select: { tweetsLiked: true },
+        });
+    
+        if (!user) {
+            throw new Error('User not found');
+        }
+    
+        // Filter out the tweet ID that should be unliked
+        const updatedTweetsLiked = user.tweetsLiked.filter(tweetId => tweetId !== id);
+    
+        // Update the user's liked tweets list
+        return await prismaClient.user.update({
+            where: { id: userId },
+            data: { tweetsLiked: updatedTweetsLiked },
+        });
+    }
+    
+         
+    
 }
 
 export default UserService

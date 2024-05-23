@@ -8,12 +8,16 @@ export const userTypes = `#graphql
     email: String!
     profileImageUrl: String
 
-    follower :[User]
-    following :[User]
+    follower: [User]
+    following: [User]
 
-    recommendedUsers : [User]
+    createdAt: String
 
-    tweets : [Tweet]
+    recommendedUsers: [User]
+    tweetsLiked: [String]
+
+    tweets: [Tweet]
+
     }
 
 `
