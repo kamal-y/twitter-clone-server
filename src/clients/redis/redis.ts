@@ -1,4 +1,4 @@
 import Redis from "ioredis"
 
-export const redisClient = new Redis(process.env.REDIS_CONNECTION_URL as string));
+export const redisClient = new Redis(process.env.REDIS_CONNECTION_URL as string);
 
